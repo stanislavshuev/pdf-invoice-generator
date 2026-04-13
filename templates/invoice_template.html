@@ -1,1 +1,213 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Счёт на оплату</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; font-size: 11px; padding: 20px; color: #000; }
 
+    /* ── Банковский блок ── */
+    .bank-block {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border: 1px solid #000;
+      margin-bottom: 4px;
+    }
+    .bank-left { padding: 4px 6px; border-right: 1px solid #000; }
+    .bank-right { padding: 4px 6px; }
+    .bank-row { display: flex; gap: 8px; align-items: baseline; }
+    .bank-label { font-size: 9px; color: #555; white-space: nowrap; }
+    .bank-value { font-weight: bold; font-size: 11px; }
+    .bank-name { font-size: 10px; color: #555; }
+
+    /* ── Заголовок счёта ── */
+    .invoice-title {
+      font-size: 16px;
+      font-weight: bold;
+      margin: 12px 0 8px;
+    }
+
+    /* ── Стороны ── */
+    .parties { margin-bottom: 10px; }
+    .party-row { display: flex; gap: 8px; margin-bottom: 2px; }
+    .party-label { font-weight: bold; min-width: 90px; }
+
+    /* ── Таблица товаров ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 0;
+    }
+    table th, table td {
+      border: 1px solid #000;
+      padding: 4px 6px;
+      text-align: left;
+    }
+    table th {
+      background: #f0f0f0;
+      font-weight: bold;
+      text-align: center;
+    }
+    td.center { text-align: center; }
+    td.right  { text-align: right; }
+
+    /* ── Итоги ── */
+    .totals { border: 1px solid #000; border-top: none; }
+    .totals-row {
+      display: flex;
+      justify-content: flex-end;
+      padding: 3px 8px;
+      gap: 20px;
+      border-bottom: 1px solid #ccc;
+    }
+    .totals-row:last-child { border-bottom: none; }
+    .totals-label { color: #333; }
+    .totals-value { font-weight: bold; min-width: 80px; text-align: right; }
+    .totals-total .totals-value { font-size: 13px; }
+
+    /* ── Подвал ── */
+    .footer { margin-top: 10px; font-size: 10px; }
+    .footer-bold { font-weight: bold; margin-bottom: 2px; }
+    .footer-basis { font-style: italic; margin-bottom: 12px; }
+
+    .signatures {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 16px;
+    }
+    .sig-block { }
+    .sig-title { font-weight: bold; margin-bottom: 20px; }
+    .sig-line {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      border-bottom: 1px solid #000;
+      padding-bottom: 2px;
+      margin-bottom: 2px;
+    }
+    .sig-hint { font-size: 9px; color: #555; }
+  </style>
+</head>
+<body>
+
+  <!-- ══════════ БАНКОВСКИЙ БЛОК ══════════ -->
+  <div class="bank-block">
+    <div class="bank-left">
+      <div class="bank-name">{{ bank_name }}</div>
+      <div class="bank-name">Банк получателя</div>
+    </div>
+    <div class="bank-right">
+      <div class="bank-row">
+        <span class="bank-label">БИК</span>
+        <span class="bank-value">{{ bik }}</span>
+      </div>
+      <div class="bank-row">
+        <span class="bank-label">Сч. №</span>
+        <span class="bank-value">{{ bank_account }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="bank-block">
+    <div class="bank-left">
+      <div class="bank-row">
+        <span class="bank-label">ИНН</span>
+        <span class="bank-value">{{ inn }}</span>
+        <span class="bank-label" style="margin-left:16px;">КПП</span>
+        <span class="bank-value">{{ kpp }}</span>
+      </div>
+      <div style="margin-top:2px;">{{ company_name }}</div>
+      <div class="bank-name">Получатель</div>
+    </div>
+    <div class="bank-right">
+      <div class="bank-row">
+        <span class="bank-label">Сч. №</span>
+        <span class="bank-value">{{ recipient_account }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ ЗАГОЛОВОК ══════════ -->
+  <div class="invoice-title">Счёт № {{ invoice_id }}</div>
+
+  <!-- ══════════ СТОРОНЫ ══════════ -->
+  <div class="parties">
+    <div class="party-row">
+      <span class="party-label">Поставщик:</span>
+      <span>{{ supplier }}</span>
+    </div>
+    <div class="party-row">
+      <span class="party-label">Покупатель:</span>
+      <span>{{ buyer }}</span>
+    </div>
+  </div>
+
+  <!-- ══════════ ТАБЛИЦА ТОВАРОВ ══════════ -->
+  <table>
+    <thead>
+      <tr>
+        <th style="width:30px;">№</th>
+        <th>Наименование работ, услуг</th>
+        <th style="width:60px;">Кол-во</th>
+        <th style="width:45px;">Ед.</th>
+        <th style="width:80px;">Цена</th>
+        <th style="width:90px;">Сумма</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Одна строка товара — для каждого товара дублируй этот <tr> -->
+      <tr>
+        <td class="center">1</td>
+        <td>Услуги по договору</td>
+        <td class="center">1</td>
+        <td class="center">шт.</td>
+        <td class="right">{{ total_amount }}</td>
+        <td class="right">{{ total_amount }}</td>
+      </tr>
+      <!-- /item_row -->
+    </tbody>
+  </table>
+
+  <!-- ══════════ ИТОГИ ══════════ -->
+  <div class="totals">
+    <div class="totals-row">
+      <span class="totals-label">Итого:</span>
+      <span class="totals-value">{{ total_amount }}</span>
+    </div>
+    <div class="totals-row">
+      <span class="totals-label">В том числе НДС:</span>
+      <span class="totals-value">-</span>
+    </div>
+    <div class="totals-row totals-total">
+      <span class="totals-label"><strong>Всего к оплате:</strong></span>
+      <span class="totals-value">{{ total_amount }}</span>
+    </div>
+  </div>
+
+  <!-- ══════════ ПОДВАЛ ══════════ -->
+  <div class="footer">
+    <div class="footer-bold">Всего к оплате: {{ total_amount }}</div>
+    <div class="footer-basis">Основание: {{ basis }}</div>
+
+    <div class="signatures">
+      <div class="sig-block">
+        <div class="sig-title">Руководитель</div>
+        <div class="sig-line">
+          <span style="flex:1; border-bottom:1px solid #999;"></span>
+        </div>
+        <div class="sig-hint">подпись &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; расшифровка подписи</div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-title">Бухгалтер</div>
+        <div class="sig-line">
+          <span style="flex:1; border-bottom:1px solid #999;"></span>
+        </div>
+        <div class="sig-hint">подпись &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; расшифровка подписи</div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
